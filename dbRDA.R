@@ -1,49 +1,51 @@
-
-
 ####### db-RDA pages(188-190 in Brocard et al.)
 library(vegan)
-cewa_bio <- readRDS("Cerulean_Warbler/cewa_bio.RDS")
+library(dplyr)
+library(ggplot2)
+#read in data
+cewa_bio <- readRDS("Cerulean_Warbler/cewa_biovars.RDS")
+cewa_bio <- cewa_bio %>%
+  rename(year = YEAR, annual_mean_temp = wc2.1_10m_bio_1, mean_diurnal_range = wc2.1_10m_bio_2,
+         isothermality = wc2.1_10m_bio_3, temp_seasonality = wc2.1_10m_bio_4,
+         max_temp_warmest_month = wc2.1_10m_bio_5, min_temp_coldest_month = wc2.1_10m_bio_6,
+         temp_annual_range = wc2.1_10m_bio_7, mean_temp_wettest_quart = wc2.1_10m_bio_8,
+         mean_temp_driest_quart = wc2.1_10m_bio_9, mean_temp_warmest_quart = wc2.1_10m_bio_10,
+         mean_temp_coldest_quart = wc2.1_10m_bio_11, annual_percip = wc2.1_10m_bio_12, 
+         percip_wettest_month = wc2.1_10m_bio_13, percip_driest_month = wc2.1_10m_bio_14,
+         percip_season = wc2.1_10m_bio_15, percip_wettest_quart = wc2.1_10m_bio_16,
+         percip_driest_quart = wc2.1_10m_bio_17, percip_warmest_quart = wc2.1_10m_bio_18,
+         percip_coldest_quart = wc2.1_10m_bio_19)
+cewa_bio_clean <- cewa_bio
 
+cewa_bio_clean$SAMPLING.EVENT.IDENTIFIER <- NULL
+cewa_bio_clean$ID <- NULL
+cewa_bio_clean$geometry <- NULL
+cewa_bio_clean <- cewa_bio_clean[complete.cases(cewa_bio_clean) &
+                  !is.infinite(rowSums(cewa_bio_clean)), ]
 
+# Scale all columns except 'year' (non-numeric variables should be excluded)
+zcewa <- cewa_bio_clean  # Create a copy of the data
+zcewa[-1] <- scale(zcewa[-1])  # Apply scaling to all columns except 'year'
 
-#########Modify Data
-#remove site 8
-spe <- spe[-8, ]
-env <- env[-8, ]
+# Remove empty columns (columns with all zeros or NA)
+zcewa <- zcewa[, colSums(zcewa != 0, na.rm = TRUE) > 0]
 
-env$pen
+# Set sample size and ensure there are enough rows per year
+sample_size <- 100
+zcewa_sampled <- zcewa %>%
+  group_by(year) %>%
+  filter(n() >= sample_size) %>%  # Ensure each year has enough rows
+  slice_sample(n = sample_size, replace = FALSE) %>%  # Sample 100 rows per year
+  ungroup()  # Ungroup after sampling
 
-# Remove the 'das' variable from the env dataset
-env <- env[, -1]
+# Run the constrained ordination
+db.rda <- capscale(zcewa_sampled ~ min_temp_coldest_month + percip_wettest_month + 
+                     mean_temp_coldest_quart + percip_wettest_quart +
+                     annual_percip + isothermality, 
+                   data = zcewa_sampled,
+                   distance = "bray", 
+                   add = TRUE)
 
-# Recode the slope variable (pen) into a factor (qualitative) 
-# variable (to show how these are handled in the ordinations)
-pen2 <- rep("very_steep", nrow(env))
-pen2[env$pen <= quantile(env$pen)[4]] <- "steep"
-pen2[env$pen <= quantile(env$pen)[3]] <- "moderate"
-pen2[env$pen <= quantile(env$pen)[2]] <- "low"
-pen2 <- factor(pen2, levels=c("low", "moderate", "steep", "very_steep"))
-table(pen2)
-
-
-# Create an env2 data frame with slope as a qualitative variable
-env2 <- env
-env2$pen <- pen2
-
-
-#name each environmental varaible
-
-alt<-env2$alt
-oxy<-env2$oxy
-dbo<-env2$dbo
-dur<-env2$dur
-pen<-env2$pen
-
-
-#Use the "capscale" function in Vegan to run db-rda.Note that the "distance" 
-#argument turns the site by species matrix into a distance matrix. You can use any distance measure in vegan (i.e., vegdist function)
-
-db.rda <- capscale(spe ~ alt + oxy + dbo + dur, distance = "bray", add=TRUE)
 summary(db.rda)
 
 
@@ -68,18 +70,22 @@ arrows(0, 0, spe.sc[, 1], spe.sc[, 2], length=0, lty=1, col="red")
 #Conduct a permutation test using anova function in vegan to test the significance of the model, individual axes, and varaibles:
 
 #Global test of the RDA result
-anova(db.rda, step=1000)
+#anova(db.rda, step=1000)
 
 #Tests of all canonical axes:
-anova(db.rda, by="axis", step=1000)
+#anova(db.rda, by="axis", step=1000)
 
 #Tests of all variables:
-anova(db.rda, by="margin", step=1000)
+#anova(db.rda, by="margin", step=1000)
 
 #partial RDA
 #Use the "capscale" function in Vegan to run partial db-rda
 
-db.rda <- capscale(spe ~ alt + Condition(oxy + dbo + dur), distance = "bray", add=TRUE)
+db.rda <- capscale(zcewa_sampled ~ min_temp_coldest_month + 
+                     Condition(percip_wettest_month + mean_temp_coldest_quart + 
+                                 percip_wettest_quart + annual_percip +
+                                 isothermality), 
+                   distance = "bray", add=TRUE)
 summary(db.rda)
 
 R2 <- RsquareAdj(db.rda)$r.squared
@@ -88,8 +94,9 @@ R2adj <- RsquareAdj(db.rda)$adj.r.squared
 
 #Here we partition the variance for the model we constructed trough forward selection above: 
 #first we have to create our distance matrix as the response matrix
-resp<-vegdist(spe, method="bray")
+resp<-vegdist(zcewa_sampled, method="bray")
 
 #then we run the varpart function from vegan
-spe.part <- varpart(resp,~ alt,~ oxy,~ dur ,~dbo ,data=env2)
-plot(spe.part, digits=2)
+cewa.part <- varpart(resp,~ percip_wettest_month,~ mean_temp_coldest_quart,
+                     ~ percip_wettest_quart ,~annual_percip ,data=zcewa_sampled)
+plot(cewa.part, digits=2)

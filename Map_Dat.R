@@ -3,11 +3,11 @@ library(ggplot2)
 library(sf)
 library(rnaturalearth)
 library(dplyr)
-
 library(vegan)
-library(ca)
-library(ggplot2)
-library(dplyr)
+library(gganimate)
+library(sf)
+library(transformr) # For smoother transitions
+
 cewa_bio <- readRDS("Cerulean_Warbler/cewa_biovars.RDS")
 cewa_bio <- cewa_bio %>%
   rename(year = YEAR, annual_mean_temp = wc2.1_10m_bio_1, mean_diurnal_range = wc2.1_10m_bio_2,
@@ -23,8 +23,8 @@ cewa_bio <- cewa_bio %>%
 cewa_bio_clean <- cewa_bio %>%
   group_by(year, geometry)
 
-data_with_presence_absence <- cewa_bio_summary %>%
-  group_by(year, geometry, sampling.event.identifier) %>%
+data_with_presence_absence <- cewa_bio_clean %>%
+  group_by(year, geometry) %>%
   summarize(Presence = 1, .groups = "drop")
 
 # Separate geometry into lat/long
@@ -51,6 +51,7 @@ ggplot() +
   geom_sf(data = americas, fill = "lightgray", color = "black") +  # Light gray fill and black borders
   # Add presence/absence points
   geom_point(data = data_with_presence_absence, aes(x = long, y = lat, color = as.factor(year))) +
-  labs(title = "Presence by Coordinates", color = "Year") +  # Title and legend labels
+  labs(title = "Presence by Coordinates", color = "Year") + # Title and legend labels
   theme_minimal() +
   coord_sf(xlim = c(-180, -30), ylim = c(-60, 85))  # Limit the map to Americas (North and South)
+
