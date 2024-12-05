@@ -1,3 +1,4 @@
+# Load packages
 library(raster)
 library(cluster)
 library(mvnormtest)
@@ -6,19 +7,29 @@ library(vegan)
 library(ggplot2)
 library(RColorBrewer)
 library(dplyr)
+library(sf)
 
-#read in data
+# Read in data
 cewa_bio <- readRDS("Cerulean_Warbler/cewa_biovars.RDS")
 cewa_bio <- cewa_bio %>%
-  rename(year = YEAR, annual_mean_temp = wc2.1_10m_bio_1, mean_diurnal_range = wc2.1_10m_bio_2,
-         isothermality = wc2.1_10m_bio_3, temp_seasonality = wc2.1_10m_bio_4,
-         max_temp_warmest_month = wc2.1_10m_bio_5, min_temp_coldest_month = wc2.1_10m_bio_6,
-         temp_annual_range = wc2.1_10m_bio_7, mean_temp_wettest_quart = wc2.1_10m_bio_8,
-         mean_temp_driest_quart = wc2.1_10m_bio_9, mean_temp_warmest_quart = wc2.1_10m_bio_10,
-         mean_temp_coldest_quart = wc2.1_10m_bio_11, annual_percip = wc2.1_10m_bio_12, 
-         percip_wettest_month = wc2.1_10m_bio_13, percip_driest_month = wc2.1_10m_bio_14,
-         percip_season = wc2.1_10m_bio_15, percip_wettest_quart = wc2.1_10m_bio_16,
-         percip_driest_quart = wc2.1_10m_bio_17, percip_warmest_quart = wc2.1_10m_bio_18,
+  rename(year = YEAR, annual_mean_temp = wc2.1_10m_bio_1,
+         mean_diurnal_range = wc2.1_10m_bio_2,
+         isothermality = wc2.1_10m_bio_3, 
+         temp_seasonality = wc2.1_10m_bio_4,
+         max_temp_warmest_month = wc2.1_10m_bio_5, 
+         min_temp_coldest_month = wc2.1_10m_bio_6,
+         temp_annual_range = wc2.1_10m_bio_7, 
+         mean_temp_wettest_quart = wc2.1_10m_bio_8,
+         mean_temp_driest_quart = wc2.1_10m_bio_9,
+         mean_temp_warmest_quart = wc2.1_10m_bio_10,
+         mean_temp_coldest_quart = wc2.1_10m_bio_11, 
+         annual_percip = wc2.1_10m_bio_12, 
+         percip_wettest_month = wc2.1_10m_bio_13, 
+         percip_driest_month = wc2.1_10m_bio_14,
+         percip_season = wc2.1_10m_bio_15, 
+         percip_wettest_quart = wc2.1_10m_bio_16,
+         percip_driest_quart = wc2.1_10m_bio_17, 
+         percip_warmest_quart = wc2.1_10m_bio_18,
          percip_coldest_quart = wc2.1_10m_bio_19)
 cewa_bio_clean <- cewa_bio %>%
   group_by(year, geometry)
@@ -32,6 +43,8 @@ zcewa <- cewa_bio_clean  # Create a copy of the data
 zcewa[-1] <- scale(cewa_bio_clean[-1])  # Apply scaling to all columns except the first
 
 tail(zcewa)
+
+set.seed(33)
 
 # Set the sample size (100 rows per year)
 sample_size <- 100
@@ -60,24 +73,13 @@ colnames(treat) <- "Year"
 
 # Define color palette for the year groups (2000:2010 and 2011:2024)
 year_groups <- ifelse(treat >= 2000 & treat <= 2010, "2000:2010", "2011:2024")
-colors <- brewer.pal(2, "Set1")  # Two colors: one for 2000:2010, and one for 2011:2024
-
-# Plot out the points (islands)
-ordiplot(nmdscewa, type = "n", xlim = c(-1.5, 1.5), ylim = c(-1.5, 1.5))
-orditorp(nmdscewa, display = "sites", col = colors[as.factor(year_groups)], air = 0.01, cex = 1.25)
-
-# Add legend in the top left corner
-legend("topleft", legend = c("2000:2010", "2011:2024"), 
-       cex = 0.8, col = colors, pch = 15)
-
-# Add a convex hull around each group:
-ordihull(nmdscewa, groups = year_groups, display = "si", lty = 1, col = "green", show.groups = "2000:2010")
-ordihull(nmdscewa, groups = year_groups, display = "si", lty = 1, col = "blue", show.groups = "2011:2024")
+colors <- brewer.pal(2, "Set1") 
 
 data.scores <- as.data.frame(nmdscewa$points)
 data.scores$time <- treat
 head(data.scores)
 
+# Graph the NMDS
 ggplot(data.scores, aes(x=MDS1, y=MDS2, col=year_groups)) +
   geom_point() +
   geom_text(aes(label=rownames(data.scores)),hjust=0, vjust=0) +
@@ -89,6 +91,6 @@ ggplot(data.scores, aes(x=MDS1, y=MDS2, col=year_groups)) +
 
 ### Correspondence Analysis (CA)
 caCEWA <- ca(zcewa_sampled_no_negatives)
-plot(caTree, xlim = c(-1, 3), ylim = c(-4, 5))
+plot(caCEWA, xlim = c(-1, 3), ylim = c(-4, 5))
 
 

@@ -1,18 +1,17 @@
 # Levi Hoskins
 # 1 Noviembre 2024
-# Proyecto Final - Los Aves (Kentucky Warbler, Cerulean Warbler)
+# Proyecto Final - Curraca cerulea
 # R 4.4.1
 
+# Load packages
 library(ggplot2)
 library(tidyverse)
 library(lubridate)
 library(readr)
 library(dplyr)
 
-#extract data with filters
+# Extract data with filters
 cw <- read_sf("Cerulean_Warbler/CEWA.csv") 
-tail(cw)
-
 filtered_cw <- cw %>%
   dplyr::select(SAMPLING.EVENT.IDENTIFIER, SCIENTIFIC.NAME, OBSERVATION.COUNT, 
                 COUNTRY.CODE, STATE, STATE.CODE, LOCALITY.ID, LATITUDE, LONGITUDE, 
@@ -30,26 +29,11 @@ dat_cw <- filtered_cw %>%
   dplyr::filter(!SAMPLING.EVENT.IDENTIFIER %in% lists_with_x_cw$SAMPLING.EVENT.IDENTIFIER) %>%
   mutate(OBSERVATION.DATE = mdy(OBSERVATION.DATE))
 
-saveRDS(dat_cw, "Cerulean_Warbler/dat_raw_CEWA.RDS")
-
+#saveRDS(dat_cw, "Cerulean_Warbler/dat_raw_CEWA.RDS")
 dat_cw <- readRDS("Cerulean_Warbler/dat_raw_CEWA.RDS")
 
-#split filtered data by month
-#dat_cw_month <- dat_cw %>%
-  #mutate(MONTH=month(OBSERVATION.DATE, label = TRUE, abbr = TRUE))
 
-#split_by_month_function <- function(month){
-  
- # temp <- dat_cw_month %>%
-  #  dplyr::filter(MONTH==month)
-  
-#  saveRDS(temp, paste0("Cerulean_Warbler/dat_raw_CEWA_", month, ".RDS"))
-  
-#}
-
-#lapply(unique(dat_cw_month$MONTH), split_by_month_function)
-
-#split filtered data by year ### FIX THIS HOE
+#split filtered data by year
 dat_cw_year <- dat_cw %>%
   mutate(YEAR=year(OBSERVATION.DATE))
 

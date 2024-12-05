@@ -2,7 +2,7 @@
 # Bioclimatic Variables
 # R 4.4.1
 
-# load packages
+# Load packages
 library(dismo)
 library(ggplot2)
 library(dplyr)
@@ -12,8 +12,7 @@ library(sf)
 library(sp)
 library(geodata)
 
-# load in data
-#read in eBird data and join with modified scores for each eBird checklist
+# Read in eBird data and join with modified scores for each eBird checklist
 cewa_mod <- readRDS("Cerulean_Warbler/dat_raw_CEWA_2000.RDS") %>%
   bind_rows(readRDS("Cerulean_Warbler/dat_raw_CEWA_2001.RDS")) %>%
   bind_rows(readRDS("Cerulean_Warbler/dat_raw_CEWA_2002.RDS")) %>%
@@ -40,20 +39,20 @@ cewa_mod <- readRDS("Cerulean_Warbler/dat_raw_CEWA_2000.RDS") %>%
   bind_rows(readRDS("Cerulean_Warbler/dat_raw_CEWA_2023.RDS")) %>%
   bind_rows(readRDS("Cerulean_Warbler/dat_raw_CEWA_2024.RDS")) 
 
-#convert points to sf object
+# Convert points to sf object
 cewa_sf <- cewa_mod %>%
   dplyr::select(SAMPLING.EVENT.IDENTIFIER, LONGITUDE, LATITUDE, YEAR) %>%
   distinct() %>%
   st_as_sf(coords=c("LONGITUDE", "LATITUDE"), crs=4326)
 
-# draw in Bioclimatic variables with 'biovars' function in dismo
+# Draw in Bioclimatic variables with 'biovars' function in dismo
 bioclim_data <- geodata::worldclim_global(var = "bio", res = 10, path = "Cerulean_Warbler")
 
-# extract bioclimatic variables for each location in eBird data
+# Extract bioclimatic variables for each location in eBird data
 biovars <- extract(bioclim_data, cewa_sf)
 
-# combine extracted bioclimatic variables with eBird data
+# Combine extracted bioclimatic variables with eBird data
 cewa_biovars <- cbind(cewa_sf, biovars)
 
-# save RDS
-saveRDS(cewa_biovars, "Cerulean_Warbler/cewa_biovars.RDS")
+# Save RDS
+#saveRDS(cewa_biovars, "Cerulean_Warbler/cewa_biovars.RDS")

@@ -1,13 +1,12 @@
-# Load necessary libraries
+# Load package
 library(ggplot2)
 library(sf)
 library(rnaturalearth)
 library(dplyr)
 library(vegan)
-library(gganimate)
 library(sf)
-library(transformr) # For smoother transitions
 
+# Read in data and rename columns, then clean up for order
 cewa_bio <- readRDS("Cerulean_Warbler/cewa_biovars.RDS")
 cewa_bio <- cewa_bio %>%
   rename(year = YEAR, annual_mean_temp = wc2.1_10m_bio_1, mean_diurnal_range = wc2.1_10m_bio_2,
@@ -23,16 +22,17 @@ cewa_bio <- cewa_bio %>%
 cewa_bio_clean <- cewa_bio %>%
   group_by(year, geometry)
 
-data_with_presence_absence <- cewa_bio_clean %>%
+# Add in presence column
+data_with_presence <- cewa_bio_clean %>%
   group_by(year, geometry) %>%
   summarize(Presence = 1, .groups = "drop")
 
 # Separate geometry into lat/long
-data_with_presence_absence <- data_with_presence_absence %>%
+data_with_presence <- data_with_presence %>%
   mutate(long = st_coordinates(.)[, 1],  # Extract longitude
          lat = st_coordinates(.)[, 2]) #Extract latitude
 
-data_with_presence_absence <- readRDS("Cerulean_Warbler/data_with_presence_absence.RDS")
+data_with_presence <- readRDS("Cerulean_Warbler/data_with_presence.RDS")
 
 # Load world map data at medium scale
 world <- ne_countries(scale = "medium", returnclass = "sf")
@@ -42,16 +42,14 @@ world <- ne_countries(scale = "medium", returnclass = "sf")
 americas <- world %>%
   filter(continent %in% c("North America", "South America"))
 
-# Assuming data_with_presence_absence is already in sf format and has latitude/longitude
-data_with_presence_absence <- st_as_sf(data_with_presence_absence)
+# sf format for mapping
+data_with_presence <- st_as_sf(data_with_presence)
 
-# Plot the map with presence/absence points
+# Plot the map with presence points
 ggplot() +
-  # Add the Americas shapefile
-  geom_sf(data = americas, fill = "lightgray", color = "black") +  # Light gray fill and black borders
-  # Add presence/absence points
-  geom_point(data = data_with_presence_absence, aes(x = long, y = lat, color = as.factor(year))) +
-  labs(title = "Presence by Coordinates", color = "Year") + # Title and legend labels
+  geom_sf(data = americas, fill = "lightgray", color = "black") + 
+  geom_point(data = data_with_presence, 
+             aes(x = long, y = lat, color = as.factor(year))) +
+  labs(title = "Presence by Coordinates", color = "Year") + 
   theme_minimal() +
-  coord_sf(xlim = c(-180, -30), ylim = c(-60, 85))  # Limit the map to Americas (North and South)
-
+  coord_sf(xlim = c(-180, -30), ylim = c(-60, 85))  

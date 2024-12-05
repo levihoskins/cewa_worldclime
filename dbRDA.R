@@ -17,28 +17,31 @@ cewa_bio <- cewa_bio %>%
          percip_coldest_quart = wc2.1_10m_bio_19)
 cewa_bio_clean <- cewa_bio
 
+# Cleaning/filtering data
 cewa_bio_clean$SAMPLING.EVENT.IDENTIFIER <- NULL
 cewa_bio_clean$ID <- NULL
 cewa_bio_clean$geometry <- NULL
 cewa_bio_clean <- cewa_bio_clean[complete.cases(cewa_bio_clean) &
                   !is.infinite(rowSums(cewa_bio_clean)), ]
 
-# Scale all columns except 'year' (non-numeric variables should be excluded)
-zcewa <- cewa_bio_clean  # Create a copy of the data
-zcewa[-1] <- scale(zcewa[-1])  # Apply scaling to all columns except 'year'
+set.seed(33)
 
-# Remove empty columns (columns with all zeros or NA)
+# Scale all columns except 'year' (non-numeric variables should be excluded)
+zcewa <- cewa_bio_clean 
+zcewa[-1] <- scale(zcewa[-1])
+
+# Remove empty columns
 zcewa <- zcewa[, colSums(zcewa != 0, na.rm = TRUE) > 0]
 
-# Set sample size and ensure there are enough rows per year
+# Set sample size
 sample_size <- 100
 zcewa_sampled <- zcewa %>%
   group_by(year) %>%
-  filter(n() >= sample_size) %>%  # Ensure each year has enough rows
-  slice_sample(n = sample_size, replace = FALSE) %>%  # Sample 100 rows per year
-  ungroup()  # Ungroup after sampling
+  filter(n() >= sample_size) %>% 
+  slice_sample(n = sample_size, replace = FALSE) %>%
+  ungroup() 
 
-# Run the constrained ordination
+# Run the dbRDA
 db.rda <- capscale(zcewa_sampled ~ min_temp_coldest_month + percip_wettest_month + 
                      mean_temp_coldest_quart + percip_wettest_quart +
                      annual_percip + isothermality, 
@@ -48,11 +51,9 @@ db.rda <- capscale(zcewa_sampled ~ min_temp_coldest_month + percip_wettest_month
 
 summary(db.rda)
 
-
 #R2 and adjusted R2
 R2 <- RsquareAdj(db.rda)$r.squared
 R2adj <- RsquareAdj(db.rda)$adj.r.squared
-
 
 #Plot using the F-scores:
 par(mfrow=c(1,2))
@@ -67,36 +68,18 @@ plot(db.rda, scaling=1, display=c("sp", "lc", "cn"),
 arrows(0, 0, spe.sc[, 1], spe.sc[, 2], length=0, lty=1, col="red")
 
 
-#Conduct a permutation test using anova function in vegan to test the significance of the model, individual axes, and varaibles:
 
-#Global test of the RDA result
-#anova(db.rda, step=1000)
+# Global test of the RDA result with ANOVA/permutations in vegan package
+anova(db.rda, step=1000)
+# Tests of all canonical axes:
+#anova(db.rda, by="axis", step=1000) #crashes running this
+# Tests of all variables:
+#anova(db.rda, by="margin", step=1000) #crashes running this
 
-#Tests of all canonical axes:
-#anova(db.rda, by="axis", step=1000)
-
-#Tests of all variables:
-#anova(db.rda, by="margin", step=1000)
-
-#partial RDA
-#Use the "capscale" function in Vegan to run partial db-rda
-
-db.rda <- capscale(zcewa_sampled ~ min_temp_coldest_month + 
-                     Condition(percip_wettest_month + mean_temp_coldest_quart + 
-                                 percip_wettest_quart + annual_percip +
-                                 isothermality), 
-                   distance = "bray", add=TRUE)
-summary(db.rda)
-
-R2 <- RsquareAdj(db.rda)$r.squared
-R2adj <- RsquareAdj(db.rda)$adj.r.squared
-
-
-#Here we partition the variance for the model we constructed trough forward selection above: 
-#first we have to create our distance matrix as the response matrix
+# Create distance matrix as the response matrix
 resp<-vegdist(zcewa_sampled, method="bray")
 
-#then we run the varpart function from vegan
+# Run varpart function from vegan
 cewa.part <- varpart(resp,~ percip_wettest_month,~ mean_temp_coldest_quart,
                      ~ percip_wettest_quart ,~annual_percip ,data=zcewa_sampled)
 plot(cewa.part, digits=2)
