@@ -9,7 +9,7 @@ library(RColorBrewer)
 library(dplyr)
 library(sf)
 
-# Read in data
+# Read in data and modify
 cewa_bio <- readRDS("Cerulean_Warbler/cewa_biovars.RDS")
 cewa_bio <- cewa_bio %>%
   rename(year = YEAR, annual_mean_temp = wc2.1_10m_bio_1,
@@ -63,6 +63,7 @@ zcewa_sampled_no_negatives <- zcewa_sampled %>%
 # Now calculate Bray-Curtis dissimilarity with the modified data
 jcewa <- vegdist(zcewa_sampled_no_negatives[-1], method = "bray")
 
+# Perform NMDS
 nmdscewa <- metaMDS(jcewa, k = 2, trace = T)  
 stressplot(nmdscewa)
 
@@ -75,6 +76,15 @@ colnames(treat) <- "Year"
 year_groups <- ifelse(treat >= 2000 & treat <= 2010, "2000:2010", "2011:2024")
 colors <- brewer.pal(2, "Set1") 
 
+# Run PERMANOVA in the adonis2 function in the vegan package
+permanova <- adonis2(jcewa ~ year_groups, 
+                     data = data.frame(year_groups = year_groups),
+                     permutations = 1000)
+
+# Print PERMANOVA results
+print(permanova)
+
+# Extracting scores for plotting
 data.scores <- as.data.frame(nmdscewa$points)
 data.scores$time <- treat
 head(data.scores)
@@ -89,8 +99,5 @@ ggplot(data.scores, aes(x=MDS1, y=MDS2, col=year_groups)) +
   ylim(-1.5,1.5)+
   labs(title = "NMDS Plot")
 
-### Correspondence Analysis (CA)
-caCEWA <- ca(zcewa_sampled_no_negatives)
-plot(caCEWA, xlim = c(-1, 3), ylim = c(-4, 5))
 
 

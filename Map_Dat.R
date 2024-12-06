@@ -45,7 +45,7 @@ americas <- world %>%
 # sf format for mapping
 data_with_presence <- st_as_sf(data_with_presence)
 
-# Plot the map with presence points
+# Plot the map with presence points (Figure 1)
 ggplot() +
   geom_sf(data = americas, fill = "lightgray", color = "black") + 
   geom_point(data = data_with_presence, 
@@ -53,3 +53,12 @@ ggplot() +
   labs(title = "Presence by Coordinates", color = "Year") + 
   theme_minimal() +
   coord_sf(xlim = c(-180, -30), ylim = c(-60, 85))  
+
+# Plot to analyze weird pattern (Figure 5)
+ggplot() +
+  geom_sf(data = americas, fill = "lightgray", color = "black") + 
+  geom_point(data = data_with_presence, 
+             aes(x = long, y = lat, color = as.factor(year))) +
+  labs(title = "Cerulean Warblers in the United States", color = "Year") + 
+  theme_minimal() +
+  coord_sf(xlim = c(-100, -70), ylim = c(20, 50)) 

@@ -83,8 +83,9 @@ cewa_pca_shifted <- cewa_bio_pca + pca_shifted
 # Now calculate Bray-Curtis dissimilarity
 jcewa_bray <- vegdist(cewa_pca_shifted, method = "bray")
 
-# Perform cmds
+# Perform cmd
 cmd <- cmdscale(jcewa_bray, k = 5, eig = TRUE)
+summary(cmd)
 
 # Extract eigenvalues and proportions
 eigenvalues <- cmd$eig[1:5]
